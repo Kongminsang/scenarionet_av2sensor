@@ -67,7 +67,7 @@ def extract_tracks(tracks, sdc_idx, track_length):
             width = 1
 
         for _, state in enumerate(obj.object_states):
-            step_count = state.timestep
+            step_count = int(state.timestep)
             obj_state["state"]["position"][step_count][0] = state.position[0]
             obj_state["state"]["position"][step_count][1] = state.position[1]
             obj_state["state"]["position"][step_count][2] = 0
@@ -249,14 +249,13 @@ def convert_av2_scenario(scenario, version):
     return md_scenario
 
 
-def preprocess_av2_scenarios(files, worker_index):
+def preprocess_av2_scenarios(files, worker_index): 
     """
     Convert the waymo files into scenario_pb2. This happens in each worker.
     :param files: a list of file path
     :param worker_index, the index for the worker
     :return: a list of scenario_pb2
     """
-
     for scenario_path in tqdm(files, desc="Process av2 scenarios for worker {}".format(worker_index)):
         scenario_id = scenario_path.stem.split("_")[-1]
         static_map_path = (scenario_path.parents[0] / f"log_map_archive_{scenario_id}.json")

@@ -13,6 +13,7 @@ import numpy as np
 import psutil
 import tqdm
 from metadrive.scenario import ScenarioDescription as SD
+from .scenario_description_mapless import ScenarioDescriptionMapless as SD_mapless
 
 from scenarionet.builder.utils import merge_database
 from scenarionet.common_utils import save_summary_and_mapping
@@ -153,13 +154,13 @@ def writing_to_directory_wrapper(
 ):
     return write_to_directory_single_worker(
         convert_func=convert_func,
-        scenarios=args[0],
-        output_path=args[3],
+        scenarios=args[0], # posixpath
+        output_path=args[3], # output_directory
         dataset_version=dataset_version,
         dataset_name=dataset_name,
         preprocess=preprocess,
         overwrite=overwrite,
-        worker_index=args[2],
+        worker_index=args[2], # 0~7
         **args[1]
     )
 
@@ -223,10 +224,16 @@ def write_to_directory_single_worker(
         # convert scenario
         sd_scenario = convert_func(scenario, dataset_version, **kwargs)
         scenario_id = sd_scenario[SD.ID]
-        export_file_name = SD.get_export_file_name(dataset_name, dataset_version, scenario_id)
 
-        if hasattr(SD, "update_summaries"):
-            SD.update_summaries(sd_scenario)
+        sd = SD if isinstance(sd_scenario, SD) else SD_mapless
+        
+        if isinstance(sd_scenario, SD): sd = SD
+        elif isinstance(sd_scenario, SD_mapless): sd = SD_mapless
+        else: raise TypeError("sd_scenario must be an instance of SD or SD_mapless.")
+        
+        export_file_name = sd.get_export_file_name(dataset_name, dataset_version, scenario_id)
+        if hasattr(sd, "update_summaries"):
+            sd.update_summaries(sd_scenario)
         else:
             raise ValueError("Please update MetaDrive to latest version.")
 
@@ -238,7 +245,7 @@ def write_to_directory_single_worker(
 
         # sanity check
         sd_scenario = sd_scenario.to_dict()
-        SD.sanity_check(sd_scenario, check_self_type=True)
+        sd.sanity_check(sd_scenario, check_self_type=True) # kong_todo: 맵 정보는 처리 안하게 수정(SD_without_map 자체를 새로 구현)
 
         # dump
         p = os.path.join(output_path, export_file_name)
